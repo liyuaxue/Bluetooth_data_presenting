@@ -32,6 +32,9 @@ workflows:
         script: |
           flutter clean
           flutter pub get
+      - name: Apply provisioning profiles
+        script: |
+          xcode-project use-profiles
       - name: CocoaPods install
         script: |
           cd ios
