@@ -45,8 +45,10 @@ workflows:
           cd ..
       - name: Build IPA
         script: |
+          EFFECTIVE_BUILD_NUMBER="${BUILD_NUMBER:-${CM_BUILD_ID:-2}}"
+          echo "Using iOS build number: $EFFECTIVE_BUILD_NUMBER"
           if [ -n "$CM_EXPORT_OPTIONS_PATH" ] && [ -f "$CM_EXPORT_OPTIONS_PATH" ]; then
-            flutter build ipa --release --export-options-plist "$CM_EXPORT_OPTIONS_PATH"
+            flutter build ipa --release --build-number "$EFFECTIVE_BUILD_NUMBER" --export-options-plist "$CM_EXPORT_OPTIONS_PATH"
           else
             echo "CM_EXPORT_OPTIONS_PATH is missing. Falling back to xcode-project build-ipa."
             xcode-project build-ipa --workspace "ios/Runner.xcworkspace" --scheme "Runner"
