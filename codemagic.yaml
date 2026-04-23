@@ -5,7 +5,7 @@ workflows:
     max_build_duration: 60
     integrations:
       # Replace with your App Store Connect integration name in Codemagic UI.
-      app_store_connect: APP_STORE_CONNECT_INTEGRATION_NAME
+      app_store_connect: asc_api
 
     environment:
       flutter: stable
