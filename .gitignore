@@ -48,3 +48,6 @@ android/gradle/dists/*.zip
 
 *.keystore
 android/key.properties
+*.p12
+*.mobileprovision
+*.p8
