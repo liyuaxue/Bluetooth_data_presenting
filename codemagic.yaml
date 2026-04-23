@@ -42,7 +42,12 @@ workflows:
           cd ..
       - name: Build IPA
         script: |
-          flutter build ipa --release --export-options-plist "$CM_EXPORT_OPTIONS_PATH"
+          if [ -n "$CM_EXPORT_OPTIONS_PATH" ] && [ -f "$CM_EXPORT_OPTIONS_PATH" ]; then
+            flutter build ipa --release --export-options-plist "$CM_EXPORT_OPTIONS_PATH"
+          else
+            echo "CM_EXPORT_OPTIONS_PATH is missing. Falling back to xcode-project build-ipa."
+            xcode-project build-ipa --workspace "ios/Runner.xcworkspace" --scheme "Runner"
+          fi
 
     artifacts:
       - build/ios/ipa/*.ipa
