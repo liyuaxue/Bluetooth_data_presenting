@@ -11,10 +11,7 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.example.bluetooth.data.presenting
-      vars:
-        APP_STORE_APPLE_ID: "" # App Store Connect -> App Information -> Apple ID (numeric)
       groups:
-        - app_store_credentials
         - ios_signing
 
     triggering:
@@ -48,10 +45,3 @@ workflows:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
       - flutter_drive.log
-
-    publishing:
-      app_store_connect:
-        auth: integration
-        submit_to_testflight: true
-        beta_groups:
-          - Internal Testers
