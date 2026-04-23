@@ -9,10 +9,8 @@ workflows:
       xcode: latest
       cocoapods: default
       ios_signing:
-        certificates:
-          - $CM_CERTIFICATE
-        provisioning_profiles:
-          - $CM_PROVISIONING_PROFILE
+        distribution_type: app_store
+        bundle_identifier: com.example.bluetooth.data.presenting
       groups:
         - ios_signing
 
