@@ -343,14 +343,23 @@ class _DashboardPageState extends State<DashboardPage> {
   Future<void> _showPrivacyPolicyLinkOnce() async {
     if (_privacyPolicyShownThisLaunch || !mounted) return;
     _privacyPolicyShownThisLaunch = true;
-    final privacyContentFuture = _fetchPrivacyPolicyContent();
+    Future<String> privacyContentFuture = _fetchPrivacyPolicyContent();
     bool usingFallback = false;
+    Timer? autoRetryTimer;
     if (!mounted) return;
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
-        return AlertDialog(
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            autoRetryTimer ??= Timer.periodic(const Duration(seconds: 4), (_) {
+              if (!mounted || !usingFallback) return;
+              setDialogState(() {
+                privacyContentFuture = _fetchPrivacyPolicyContent();
+              });
+            });
+            return AlertDialog(
               insetPadding: const EdgeInsets.symmetric(
                 horizontal: 12,
                 vertical: 24,
@@ -467,8 +476,11 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
               ],
             );
+          },
+        );
       },
     );
+    autoRetryTimer?.cancel();
   }
 
   Future<String> _fetchPrivacyPolicyContent() async {
