@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:bluetooth_data_presenting/l10n/app_localizations.dart';
+import 'package:flutter_html/flutter_html.dart';
+import 'package:http/http.dart' as http;
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'bluetooth_service.dart';
@@ -211,6 +214,25 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
+  static const String _privacyPolicyUrl = 'http://gw.059.lifala.com.cn/';
+  static const String _privacyPolicyFallbackHtml = '''
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>隐私政策 - SolarPV</title>
+</head>
+<body>
+  <h1>隐私政策</h1>
+  <p>本政策仅适用于东莞市三义科技有限公司提供的产品和服务及其延伸功能（以下简称“SolarPV”）。</p>
+  <p>我们会在法律法规允许范围内收集和使用必要信息，用于提供服务、保障安全与改进体验。</p>
+  <p>如需完整版本，请在网络可用时查看在线隐私政策页面。</p>
+</body>
+</html>
+''';
+  bool _privacyPolicyShownThisLaunch = false;
+
   // 顶部横幅消息（显示在抬头下方）
   String? _topMessage;
   Color _topMessageBg = const Color(0xFFE3F2FD);
@@ -278,6 +300,7 @@ class _DashboardPageState extends State<DashboardPage> {
     bluetoothService.loadDeviceAliases();
     // 启动后检测蓝牙是否开启，未开启则弹窗提示
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showPrivacyPolicyLinkOnce();
       _checkBluetoothOnAtStartup();
     });
     // 启动后尝试自动连接：优先历史设备
@@ -315,6 +338,146 @@ class _DashboardPageState extends State<DashboardPage> {
 
   void _onData() {
     if (mounted) setState(() {});
+  }
+
+  Future<void> _showPrivacyPolicyLinkOnce() async {
+    if (_privacyPolicyShownThisLaunch || !mounted) return;
+    _privacyPolicyShownThisLaunch = true;
+    final privacyContentFuture = _fetchPrivacyPolicyContent();
+    bool usingFallback = false;
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return AlertDialog(
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 24,
+              ),
+              contentPadding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+              title: const Text('隐私政策'),
+              content: SizedBox(
+                width: MediaQuery.of(ctx).size.width * 0.9,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 460),
+                  child: FutureBuilder<String>(
+                    future: privacyContentFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
+                      }
+                      String html = _privacyPolicyFallbackHtml;
+                      if (snapshot.hasData &&
+                          (snapshot.data ?? '').trim().isNotEmpty) {
+                        usingFallback = false;
+                        html = snapshot.data!;
+                      } else {
+                        usingFallback = true;
+                      }
+                      return SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (usingFallback)
+                              Container(
+                                margin: const EdgeInsets.only(bottom: 10),
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber.shade50,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '在线内容加载失败，当前显示本地兜底内容。\n链接：$_privacyPolicyUrl',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ),
+                            Html(
+                              data: html,
+                              style: {
+                                'html': Style(
+                                  margin: Margins.zero,
+                                  padding: HtmlPaddings.zero,
+                                  fontSize: FontSize(13),
+                                  lineHeight: const LineHeight(1.35),
+                                ),
+                                'body': Style(
+                                  margin: Margins.zero,
+                                  padding: HtmlPaddings.zero,
+                                ),
+                                'h1': Style(
+                                  fontSize: FontSize(18),
+                                  margin: Margins.only(bottom: 8),
+                                  lineHeight: const LineHeight(1.25),
+                                ),
+                                'h2': Style(
+                                  fontSize: FontSize(16),
+                                  margin: Margins.only(top: 10, bottom: 6),
+                                  lineHeight: const LineHeight(1.25),
+                                ),
+                                'h3': Style(
+                                  fontSize: FontSize(14),
+                                  margin: Margins.only(top: 8, bottom: 4),
+                                  lineHeight: const LineHeight(1.25),
+                                ),
+                                'p': Style(
+                                  margin: Margins.only(bottom: 6),
+                                  lineHeight: const LineHeight(1.35),
+                                ),
+                                'ul': Style(
+                                  margin: Margins.only(bottom: 6),
+                                  padding: HtmlPaddings.only(left: 14),
+                                ),
+                                'ol': Style(
+                                  margin: Margins.only(bottom: 6),
+                                  padding: HtmlPaddings.only(left: 14),
+                                ),
+                                'li': Style(
+                                  margin: Margins.only(bottom: 4),
+                                  lineHeight: const LineHeight(1.3),
+                                ),
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () async {
+                    Navigator.of(ctx).pop();
+                    await SystemNavigator.pop();
+                  },
+                  child: const Text('不同意并退出'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('同意并继续'),
+                ),
+              ],
+            );
+      },
+    );
+  }
+
+  Future<String> _fetchPrivacyPolicyContent() async {
+    final uri = Uri.parse(_privacyPolicyUrl);
+    final response = await http.get(uri).timeout(const Duration(seconds: 12));
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception('HTTP ${response.statusCode}');
+    }
+    return utf8.decode(response.bodyBytes, allowMalformed: true);
   }
 
   Future<void> _checkBluetoothOnAtStartup() async {
@@ -2725,6 +2888,7 @@ class _DashboardPageState extends State<DashboardPage> {
       ),
     );
   }
+
 }
 
 class SectionCard extends StatelessWidget {
